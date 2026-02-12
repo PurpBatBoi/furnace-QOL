@@ -2622,6 +2622,8 @@ bool FurnaceGUI::drawSysConf(int chan, int sysPos, DivSystem type, DivConfig& fl
     }
     case DIV_SYSTEM_NDS: {
       int chipType=flags.getInt("chipType",0);
+      int sseqSize=flags.getInt("sseqSize",0);
+      int sbnkSize=flags.getInt("sbnkSize",0);
 
       ImGui::Text(_("Model:"));
       ImGui::Indent();
@@ -2633,11 +2635,35 @@ bool FurnaceGUI::drawSysConf(int chan, int sysPos, DivSystem type, DivConfig& fl
         chipType=1;
         altered=true;
       }
+      if (ImGui::RadioButton(_("DS (128KB RAM)"),chipType==2)) {
+        chipType=2;
+        altered=true;
+      }
       ImGui::Unindent();
+
+      if (chipType==2) {
+        ImGui::Text(_("Reserved memory:"));
+        ImGui::Text(_("SSEQ size (bytes):"));
+        if (ImGui::InputInt("##SSEQSize",&sseqSize)) {
+          if (sseqSize<0) sseqSize=0;
+          if (sseqSize>131072) sseqSize=131072;
+          altered=true;
+          mustRender=true;
+        }
+        ImGui::Text(_("SBNK size (bytes):"));
+        if (ImGui::InputInt("##SBNKSize",&sbnkSize)) {
+          if (sbnkSize<0) sbnkSize=0;
+          if (sbnkSize>131072) sbnkSize=131072;
+          altered=true;
+          mustRender=true;
+        }
+      }
 
       if (altered) {
         e->lockSave([&]() {
           flags.set("chipType",chipType);
+          flags.set("sseqSize",sseqSize);
+          flags.set("sbnkSize",sbnkSize);
         });
       }
       break;

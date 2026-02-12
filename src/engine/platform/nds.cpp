@@ -564,7 +564,16 @@ const void* DivPlatformNDS::getSampleMem(int index) {
 }
 
 size_t DivPlatformNDS::getSampleMemCapacity(int index) {
-  return index == 0 ? (isDSi?16777216:4194304) : 0;
+  if (index != 0) return 0;
+  switch (chipType) {
+    case 1: return 16777216; // DSi
+    case 2: { // 128KB
+      int reserved=sseqSize+sbnkSize;
+      if (reserved>=131072) return 0;
+      return 131072-reserved;
+    }
+    default: return 4194304; // DS 4MB
+  }
 }
 
 size_t DivPlatformNDS::getSampleMemUsage(int index) {
@@ -632,12 +641,30 @@ void DivPlatformNDS::renderSamples(int sysID) {
   }
   sampleMemLen=memPos;
 
-  memCompo.capacity=(isDSi?16777216:4194304);
-  memCompo.used=sampleMemLen;
+  if (chipType==2) {
+    // add reserved regions at the end of the 128KB memory bar
+    size_t totalCap=131072;
+    if (sbnkSize>0) {
+      size_t sbnkStart=totalCap-sbnkSize;
+      memCompo.entries.push_back(DivMemoryEntry(DIV_MEMORY_RESERVED,"SBNK",-1,sbnkStart,totalCap));
+    }
+    if (sseqSize>0) {
+      size_t sseqStart=totalCap-sbnkSize-sseqSize;
+      size_t sseqEnd=totalCap-sbnkSize;
+      memCompo.entries.push_back(DivMemoryEntry(DIV_MEMORY_RESERVED,"SSEQ",-1,sseqStart,sseqEnd));
+    }
+    memCompo.capacity=totalCap;
+    memCompo.used=sampleMemLen+sseqSize+sbnkSize;
+  } else {
+    memCompo.capacity=getSampleMemCapacity();
+    memCompo.used=sampleMemLen;
+  }
 }
 
 void DivPlatformNDS::setFlags(const DivConfig& flags) {
-  isDSi=flags.getBool("chipType",0);
+  chipType=flags.getInt("chipType",0);
+  sseqSize=flags.getInt("sseqSize",0);
+  sbnkSize=flags.getInt("sbnkSize",0);
   chipClock=33513982;
   CHECK_CUSTOM_CLOCK;
 #ifdef ORIG_NDS_CORE
@@ -648,7 +675,11 @@ void DivPlatformNDS::setFlags(const DivConfig& flags) {
   for (int i=0; i<16; i++) {
     oscBuf[i]->setRate(rate);
   }
-  memCompo.capacity=(isDSi?16777216:4194304);
+  if (chipType==2) {
+    memCompo.capacity=131072;
+  } else {
+    memCompo.capacity=getSampleMemCapacity();
+  }
 }
 
 int DivPlatformNDS::init(DivEngine* p, int channels, int sugRate, const DivConfig& flags) {

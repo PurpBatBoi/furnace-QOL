@@ -71,6 +71,80 @@
 #include <sndfile.h>
 #endif
 
+namespace {
+static void guiWriteLE16(FILE* f, unsigned short v) {
+  fputc(v&0xff,f);
+  fputc((v>>8)&0xff,f);
+}
+
+static void guiWriteLE32(FILE* f, unsigned int v) {
+  fputc(v&0xff,f);
+  fputc((v>>8)&0xff,f);
+  fputc((v>>16)&0xff,f);
+  fputc((v>>24)&0xff,f);
+}
+
+static bool saveSamplesToSWAR(const std::vector<DivSample*>& samples, const char* path, String& errors) {
+  std::vector<std::vector<unsigned char>> waves;
+  std::vector<unsigned int> offsets;
+  unsigned int curOffset=0x3c+(unsigned int)(samples.size()*4);
+
+  waves.reserve(samples.size());
+  offsets.reserve(samples.size());
+
+  for (DivSample* sample: samples) {
+    std::vector<unsigned char> nextWave;
+    if (!sample->buildNDSWave(nextWave,false)) {
+      errors+=fmt::sprintf(_("%s: unsupported sample format for SWAR export."),sample->name);
+      errors+='\n';
+      continue;
+    }
+    waves.push_back(nextWave);
+    offsets.push_back(curOffset);
+    curOffset+=nextWave.size();
+  }
+
+  if (!errors.empty()) return false;
+
+  unsigned int fileSize=curOffset;
+  unsigned int dataSectionSize=fileSize-0x10;
+
+  FILE* f=ps_fopen(path,"wb");
+  if (f==NULL) {
+    errors=fmt::sprintf(_("could not save SWAR archive! (%s)"),strerror(errno));
+    return false;
+  }
+
+  fwrite("SWAR",1,4,f);
+  guiWriteLE16(f,0xfeff);
+  guiWriteLE16(f,0x0100);
+  guiWriteLE32(f,fileSize);
+  guiWriteLE16(f,0x10);
+  guiWriteLE16(f,1);
+
+  fwrite("DATA",1,4,f);
+  guiWriteLE32(f,dataSectionSize);
+  for (int i=0; i<8; i++) {
+    guiWriteLE32(f,0);
+  }
+  guiWriteLE32(f,(unsigned int)waves.size());
+  for (unsigned int offset: offsets) {
+    guiWriteLE32(f,offset);
+  }
+
+  for (const std::vector<unsigned char>& wave: waves) {
+    if (fwrite(wave.data(),1,wave.size(),f)!=wave.size()) {
+      errors=_("could not write entire SWAR archive.");
+      fclose(f);
+      return false;
+    }
+  }
+
+  fclose(f);
+  return true;
+}
+}
+
 bool Particle::update(float frameTime) {
   pos.x+=speed.x*frameTime;
   pos.y+=speed.y*frameTime;
@@ -2255,7 +2329,7 @@ void FurnaceGUI::openFileDialog(FurnaceGUIFileDialogs type) {
       if (!dirExists(workingDirSample)) workingDirSample=getHomeDir();
       hasOpened=fileDialog->openSave(
         _("Save Sample"),
-        {_("Wave file"), "*.wav"},
+        {_("Wave file"), "*.wav", _("Nintendo DS wave"), "*.swav"},
         workingDirSample,
         dpiScale,
         (settings.autoFillSave)?e->getSample(curSample)->name:""
@@ -2277,6 +2351,16 @@ void FurnaceGUI::openFileDialog(FurnaceGUIFileDialogs type) {
         _("Save All Samples"),
         workingDirSample,
         dpiScale
+      );
+      break;
+    case GUI_FILE_SAMPLE_SAVE_SWAR:
+      if (!dirExists(workingDirSample)) workingDirSample=getHomeDir();
+      hasOpened=fileDialog->openSave(
+        _("Save Samples To SWAR"),
+        {_("Nintendo DS wave archive"), "*.swar"},
+        workingDirSample,
+        dpiScale,
+        (settings.autoFillSave)?shortName:""
       );
       break;
     case GUI_FILE_EXPORT_AUDIO_ONE:
@@ -5871,6 +5955,7 @@ bool FurnaceGUI::loop() {
         case GUI_FILE_SAMPLE_SAVE:
         case GUI_FILE_SAMPLE_SAVE_RAW:
         case GUI_FILE_SAMPLE_SAVE_ALL:
+        case GUI_FILE_SAMPLE_SAVE_SWAR:
           workingDirSample=fileDialog->getPath()+DIR_SEPARATOR_STR;
           break;
         case GUI_FILE_EXPORT_AUDIO_ONE:
@@ -5963,7 +6048,17 @@ bool FurnaceGUI::loop() {
             checkExtension(".dmf");
           }
           if (curFileDialog==GUI_FILE_SAMPLE_SAVE) {
-            checkExtension(".wav");
+            String lowerCase=fileName;
+            for (char& i: lowerCase) {
+              if (i>='A' && i<='Z') i+='a'-'A';
+            }
+            if ((lowerCase.size()<5 || lowerCase.rfind(".wav")!=lowerCase.size()-4) &&
+                (lowerCase.size()<6 || lowerCase.rfind(".swav")!=lowerCase.size()-5)) {
+              fileName+=".wav";
+            }
+          }
+          if (curFileDialog==GUI_FILE_SAMPLE_SAVE_SWAR) {
+            checkExtension(".swar");
           }
           if (curFileDialog==GUI_FILE_EXPORT_AUDIO_ONE ||
               curFileDialog==GUI_FILE_EXPORT_AUDIO_PER_SYS ||
@@ -6181,6 +6276,15 @@ bool FurnaceGUI::loop() {
 
               if (!errors.empty()) {
                 showError(errors);
+              }
+              break;
+            }
+            case GUI_FILE_SAMPLE_SAVE_SWAR: {
+              String errors;
+              if (!saveSamplesToSWAR(e->song.sample,copyOfName.c_str(),errors)) {
+                showError(errors.empty()?_("could not save SWAR archive!"):errors);
+              } else {
+                pushRecentSys(copyOfName.c_str());
               }
               break;
             }

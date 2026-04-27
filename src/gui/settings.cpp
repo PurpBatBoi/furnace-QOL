@@ -1258,6 +1258,8 @@ void FurnaceGUI::applyUISettings(bool updateFonts) {
   newFilePicker->registerType(".dmw",uiColors[GUI_COLOR_FILE_WAVE],ICON_FA_FILE);
 
   newFilePicker->registerType(".wav",uiColors[GUI_COLOR_FILE_AUDIO],ICON_FA_FILE_AUDIO_O);
+  newFilePicker->registerType(".swav",uiColors[GUI_COLOR_FILE_AUDIO],ICON_FA_FILE_AUDIO_O);
+  newFilePicker->registerType(".swar",uiColors[GUI_COLOR_FILE_AUDIO],ICON_FA_FILE_AUDIO_O);
   newFilePicker->registerType(".dmc",uiColors[GUI_COLOR_FILE_AUDIO],ICON_FA_FILE_AUDIO_O);
   newFilePicker->registerType(".aiff",uiColors[GUI_COLOR_FILE_AUDIO],ICON_FA_FILE_AUDIO_O);
   newFilePicker->registerType(".aifc",uiColors[GUI_COLOR_FILE_AUDIO],ICON_FA_FILE_AUDIO_O);

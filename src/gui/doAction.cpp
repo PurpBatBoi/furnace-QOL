@@ -1230,6 +1230,13 @@ void FurnaceGUI::doAction(int what) {
         openFileDialog(GUI_FILE_SAMPLE_SAVE_ALL);
       }
       break;
+    case GUI_ACTION_SAMPLE_LIST_SAVE_SWAR:
+      if (e->song.sample.empty()) {
+        showError(_("this song doesn't have any samples."));
+      } else {
+        openFileDialog(GUI_FILE_SAMPLE_SAVE_SWAR);
+      }
+      break;
 
     case GUI_ACTION_SAMPLE_SELECT:
       if (curSample<0 || curSample>=(int)e->song.sample.size()) break;

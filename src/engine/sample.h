@@ -25,6 +25,7 @@
 #include "safeWriter.h"
 #include "dataErrors.h"
 #include "../fixedQueue.h"
+#include <vector>
 
 enum DivSampleLoopMode: unsigned char {
   DIV_SAMPLE_LOOP_FORWARD=0,
@@ -220,6 +221,14 @@ struct DivSample {
    * @return whether saving succeeded or not.
    */
   bool save(const char* path);
+
+  /**
+   * build a Nintendo DS wave serialization.
+   * @param out destination buffer.
+   * @param includeFileHeader whether to prepend the SWAV file header.
+   * @return whether serialization succeeded or not.
+   */
+  bool buildNDSWave(std::vector<unsigned char>& out, bool includeFileHeader=true);
 
   /**
    * save this sample to a file (raw).

@@ -818,6 +818,7 @@ const FurnaceGUIActionDef guiActions[GUI_ACTION_MAX]={
   D("SAMPLE_LIST_DIR_VIEW", _N("Samples: Toggle folders/standard view"), FURKMOD_CMD|SDLK_v),
   D("SAMPLE_LIST_MAKE_MAP", _N("Samples: Make me a drum kit"), 0),
   D("SAMPLE_LIST_SAVE_ALL", _N("Save all samples"), 0),
+  D("SAMPLE_LIST_SAVE_SWAR", _N("Save all samples to SWAR"), 0),
   D("SAMPLE_LIST_MAX", "", NOT_AN_ACTION),
 
   D("SAMPLE_MIN", _N("---Sample editor"), NOT_AN_ACTION),

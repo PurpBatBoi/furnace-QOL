@@ -547,6 +547,9 @@ void FurnaceGUI::drawInsList(bool asChild) {
         if (ImGui::MenuItem(_("save all samples..."))) {
           doAction(GUI_ACTION_SAMPLE_LIST_SAVE_ALL);
         }
+        if (ImGui::MenuItem(_("save all samples to SWAR..."))) {
+          doAction(GUI_ACTION_SAMPLE_LIST_SAVE_SWAR);
+        }
       } else {
         if (ImGui::MenuItem(_("save as .dmp..."))) {
           doAction(GUI_ACTION_INS_LIST_SAVE_DMP);
@@ -1154,6 +1157,9 @@ void FurnaceGUI::drawSampleList(bool asChild) {
         if (ImGui::MenuItem(_("save all..."))) {
           doAction(GUI_ACTION_SAMPLE_LIST_SAVE_ALL);
         }
+        if (ImGui::MenuItem(_("save all to SWAR..."))) {
+          doAction(GUI_ACTION_SAMPLE_LIST_SAVE_SWAR);
+        }
         ImGui::EndPopup();
       }
       ImGui::SameLine();
@@ -1258,6 +1264,9 @@ void FurnaceGUI::drawSampleList(bool asChild) {
           }
           if (ImGui::MenuItem("save all...")) {
             doAction(GUI_ACTION_SAMPLE_LIST_SAVE_ALL);
+          }
+          if (ImGui::MenuItem("save all to SWAR...")) {
+            doAction(GUI_ACTION_SAMPLE_LIST_SAVE_SWAR);
           }
         }
         if (buttonSpace<8.0f) if (ImGui::MenuItem("folder view",NULL,sampleListDir)) {

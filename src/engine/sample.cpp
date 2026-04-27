@@ -38,6 +38,114 @@ extern "C" {
 #include "../../extern/adpcm-xq-s/adpcm-lib.h"
 #include "brrUtils.h"
 
+static void appendLE16(std::vector<unsigned char>& out, unsigned short v) {
+  out.push_back(v&0xff);
+  out.push_back((v>>8)&0xff);
+}
+
+static void appendLE32(std::vector<unsigned char>& out, unsigned int v) {
+  out.push_back(v&0xff);
+  out.push_back((v>>8)&0xff);
+  out.push_back((v>>16)&0xff);
+  out.push_back((v>>24)&0xff);
+}
+
+bool DivSample::buildNDSWave(std::vector<unsigned char>& out, bool includeFileHeader) {
+  const unsigned char* data=NULL;
+  unsigned int dataLen=0;
+  unsigned int loopStartPos=0;
+  unsigned int loopEndPos=0;
+  unsigned char waveType=0;
+
+  out.clear();
+
+  switch (depth) {
+    case DIV_SAMPLE_DEPTH_8BIT:
+      data=(const unsigned char*)data8;
+      dataLen=length8;
+      waveType=0;
+      loopStartPos=loop?getLoopStartPosition(DIV_SAMPLE_DEPTH_8BIT):0;
+      loopEndPos=loop?getLoopEndPosition(DIV_SAMPLE_DEPTH_8BIT):getEndPosition(DIV_SAMPLE_DEPTH_8BIT);
+      break;
+    case DIV_SAMPLE_DEPTH_16BIT:
+      data=(const unsigned char*)data16;
+      dataLen=length16;
+      waveType=1;
+      loopStartPos=loop?getLoopStartPosition(DIV_SAMPLE_DEPTH_16BIT):0;
+      loopEndPos=loop?getLoopEndPosition(DIV_SAMPLE_DEPTH_16BIT):getEndPosition(DIV_SAMPLE_DEPTH_16BIT);
+      break;
+    case DIV_SAMPLE_DEPTH_IMA_ADPCM:
+      data=(const unsigned char*)dataIMA;
+      dataLen=lengthIMA;
+      waveType=2;
+      loopStartPos=loop?(4+getLoopStartPosition(DIV_SAMPLE_DEPTH_IMA_ADPCM)):4;
+      loopEndPos=loop?getLoopEndPosition(DIV_SAMPLE_DEPTH_IMA_ADPCM):getEndPosition(DIV_SAMPLE_DEPTH_IMA_ADPCM);
+      break;
+    default:
+      logE("SWAV export only supports PCM8, PCM16 and IMA-ADPCM");
+      return false;
+  }
+
+  if (data==NULL || dataLen==0) {
+    logE("sample has no data for SWAV export");
+    return false;
+  }
+
+  unsigned int sampleRate=CLAMP(centerRate,1,65535);
+  unsigned short time=(unsigned short)CLAMP((16756991u+(sampleRate/2))/sampleRate,0,65535);
+  unsigned int fileSize=0x24+dataLen;
+  unsigned short loopOffsetWords=0;
+  unsigned int totalLengthWords=dataLen/4;
+
+  if (loop) {
+    loopOffsetWords=loopStartPos/4;
+    if (loopEndPos<loopStartPos) {
+      logE("invalid SWAV loop range");
+      return false;
+    }
+  } else if (depth==DIV_SAMPLE_DEPTH_IMA_ADPCM) {
+    loopOffsetWords=1;
+  }
+
+  if (includeFileHeader) {
+    out.insert(out.end(),{'S','W','A','V'});
+    appendLE16(out,0xfeff);
+    appendLE16(out,0x0100);
+    appendLE32(out,fileSize);
+    appendLE16(out,0x10);
+    appendLE16(out,1);
+    out.insert(out.end(),{'D','A','T','A'});
+    appendLE32(out,fileSize-0x10);
+  }
+
+  out.push_back(waveType);
+  out.push_back(loop?1:0);
+  appendLE16(out,sampleRate);
+  appendLE16(out,time);
+  appendLE16(out,loopOffsetWords);
+  appendLE32(out,totalLengthWords-loopOffsetWords);
+  out.insert(out.end(),data,data+dataLen);
+  return true;
+}
+
+static bool saveSWAVFile(DivSample& sample, const char* path) {
+  std::vector<unsigned char> out;
+  if (!sample.buildNDSWave(out,true)) {
+    return false;
+  }
+
+  FILE* f=ps_fopen(path,"wb");
+  if (f==NULL) {
+    logE("could not save SWAV sample: %s!",strerror(errno));
+    return false;
+  }
+  if (fwrite(out.data(),1,out.size(),f)!=out.size()) {
+    logW("did not write entire SWAV sample");
+  }
+  fclose(f);
+  return true;
+}
+
 DivSampleHistory::~DivSampleHistory() {
   if (data!=NULL) delete[] data;
 }
@@ -451,6 +559,20 @@ void DivSample::setSampleCount(unsigned int count) {
 }
 
 bool DivSample::save(const char* path) {
+  const char* ext=strrchr(path,'.');
+  if (ext!=NULL) {
+    String extS;
+    for (; *ext; ext++) {
+      char i=*ext;
+      if (i>='A' && i<='Z') {
+        i+='a'-'A';
+      }
+      extS+=i;
+    }
+    if (extS==".swav") {
+      return saveSWAVFile(*this,path);
+    }
+  }
 #ifndef HAVE_SNDFILE
   logE("Furnace was not compiled with libsndfile!");
   return false;

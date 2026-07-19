@@ -4418,6 +4418,7 @@ bool FurnaceGUI::loop() {
   DECLARE_METRIC(memory)
   DECLARE_METRIC(compatFlags)
   DECLARE_METRIC(piano)
+  DECLARE_METRIC(pianoRoll)
   DECLARE_METRIC(notes)
   DECLARE_METRIC(tuner)
   DECLARE_METRIC(spectrum)
@@ -5069,6 +5070,7 @@ bool FurnaceGUI::loop() {
         IMPORT_CLOSE(statsOpen);
         IMPORT_CLOSE(compatFlagsOpen);
         IMPORT_CLOSE(pianoOpen);
+        IMPORT_CLOSE(pianoRollOpen);
         IMPORT_CLOSE(notesOpen);
         IMPORT_CLOSE(tunerOpen);
         IMPORT_CLOSE(spectrumOpen);
@@ -5434,6 +5436,7 @@ bool FurnaceGUI::loop() {
           if (ImGui::MenuItem(_("orders"),BIND_FOR(GUI_ACTION_WINDOW_ORDERS),ordersOpen)) ordersOpen=!ordersOpen;
           if (ImGui::MenuItem(_("pattern"),BIND_FOR(GUI_ACTION_WINDOW_PATTERN),patternOpen)) patternOpen=!patternOpen;
           if (ImGui::MenuItem(_("pattern manager"),BIND_FOR(GUI_ACTION_WINDOW_PAT_MANAGER),patManagerOpen)) patManagerOpen=!patManagerOpen;
+          if (ImGui::MenuItem(_("piano roll"),NULL,pianoRollOpen)) pianoRollOpen=!pianoRollOpen;
           if (ImGui::MenuItem(_("mixer"),BIND_FOR(GUI_ACTION_WINDOW_MIXER),mixerOpen)) mixerOpen=!mixerOpen;
           if (ImGui::MenuItem(_("compatibility flags"),BIND_FOR(GUI_ACTION_WINDOW_COMPAT_FLAGS),compatFlagsOpen)) compatFlagsOpen=!compatFlagsOpen;
           ImGui::EndMenu();
@@ -5730,6 +5733,7 @@ bool FurnaceGUI::loop() {
       MEASURE(memory,drawMemory());
       MEASURE(compatFlags,drawCompatFlags());
       MEASURE(piano,drawPiano());
+      MEASURE(pianoRoll,drawPianoRoll());
       MEASURE(notes,drawNotes());
       MEASURE(tuner,drawTuner());
       MEASURE(spectrum,drawSpectrum());
@@ -8789,6 +8793,7 @@ void FurnaceGUI::syncState() {
 #else
   pianoOpen=e->getConfBool("pianoOpen",false);
 #endif
+  pianoRollOpen=e->getConfBool("pianoRollOpen",false);
   notesOpen=e->getConfBool("notesOpen",false);
   tunerOpen=e->getConfBool("tunerOpen",false);
   spectrumOpen=e->getConfBool("spectrumOpen",false);
@@ -8860,6 +8865,8 @@ void FurnaceGUI::syncState() {
   oscZoom=e->getConfFloat("oscZoom",0.5f);
   oscZoomSlider=e->getConfBool("oscZoomSlider",false);
   oscWindowSize=e->getConfFloat("oscWindowSize",20.0f);
+
+  prEffectLaneH=ImClamp(e->getConfFloat("prEffectLaneH",40.0f),40.0f,500.0f);
 
   spectrum.bins=e->getConfInt("spectrumBins",2048);
   spectrum.xZoom=e->getConfFloat("spectrumxZoom",1.0f);
@@ -8973,6 +8980,7 @@ void FurnaceGUI::commitState(DivConfig& conf) {
   conf.set("statsOpen",statsOpen);
   conf.set("compatFlagsOpen",compatFlagsOpen);
   conf.set("pianoOpen",pianoOpen);
+  conf.set("pianoRollOpen",pianoRollOpen);
   conf.set("notesOpen",notesOpen);
   conf.set("tunerOpen",tunerOpen);
   conf.set("spectrumOpen",spectrumOpen);
@@ -9033,6 +9041,8 @@ void FurnaceGUI::commitState(DivConfig& conf) {
   conf.set("oscZoom",oscZoom);
   conf.set("oscZoomSlider",oscZoomSlider);
   conf.set("oscWindowSize",oscWindowSize);
+
+  conf.set("prEffectLaneH",prEffectLaneH);
 
   // commit spectrum state
   conf.set("spectrumBins",spectrum.bins);
@@ -9438,6 +9448,15 @@ FurnaceGUI::FurnaceGUI():
   logOpen(false),
   effectListOpen(false),
   chanOscOpen(false),
+  pianoRollOpen(false),
+  prChan(0),
+  prSelRow0(-1),
+  prSelRow1(-1),
+  prZoom(1.0f),
+  prNoteH(8.0f),
+  prTimelineH(20.0f),
+  prEffectLaneH(40.0f),
+  prShowAllChans(false),
   subSongsOpen(true),
   findOpen(false),
   spoilerOpen(false),

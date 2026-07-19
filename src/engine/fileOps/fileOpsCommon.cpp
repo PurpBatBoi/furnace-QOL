@@ -140,7 +140,9 @@ bool DivEngine::load(unsigned char* f, size_t slen, const char* nameHint) {
   }
 
   // step 2: try loading as .fur, .dmf, or another magic-ful format
-  if (memcmp(file,DIV_DMF_MAGIC,16)==0) {
+  if (len>=4 && memcmp(file,"MThd",4)==0) {
+    return loadMidi(file,len);
+  } else if (memcmp(file,DIV_DMF_MAGIC,16)==0) {
     return loadDMF(file,len); 
   } else if (memcmp(file,DIV_FTM_MAGIC,18)==0) {
     return loadFTM(file,len,(extS==".dnm"),false,(extS==".eft"));

@@ -543,6 +543,7 @@ class DivEngine {
   bool loadS3M(unsigned char* file, size_t len);
   bool loadXM(unsigned char* file, size_t len);
   bool loadIT(unsigned char* file, size_t len);
+  bool loadMidi(unsigned char* file, size_t len);
   bool loadFTM(unsigned char* file, size_t len, bool dnft, bool dnftSig, bool eft);
   bool loadFC(unsigned char* file, size_t len);
   bool loadTFMv1(unsigned char* file, size_t len);
@@ -643,6 +644,8 @@ class DivEngine {
     void createNewFromDefaults();
     // load a file.
     bool load(unsigned char* f, size_t length, const char* nameHint=NULL);
+    // set options used by the next Standard MIDI file import.
+    void setMidiImportOptions(int patternRows, int rowResolution, int noteTranspose, bool keepOldPolyphonyNote);
 
     // play a binary command stream.
     bool playStream(unsigned char* f, size_t length);

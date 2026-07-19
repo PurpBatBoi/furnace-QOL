@@ -1812,7 +1812,7 @@ class FurnaceGUI {
 
   FurnaceGUITexture* csTex;
 
-  String workingDir, fileName, clipboard, warnString, errorString, lastError, curFileName, nextFile, sysSearchQuery, newSongQuery, paletteQuery, sampleBankSearchQuery;
+  String workingDir, fileName, clipboard, warnString, errorString, lastError, curFileName, nextFile, midiImportPath, sysSearchQuery, newSongQuery, paletteQuery, sampleBankSearchQuery;
   String workingDirSong, workingDirIns, workingDirWave, workingDirSample, workingDirAudioExport;
   String workingDirVGMExport, workingDirROMExport;
   String workingDirFont, workingDirColors, workingDirKeybinds;
@@ -1838,7 +1838,8 @@ class FurnaceGUI {
   bool vgmExportDirectStream, displayInsTypeList, displayWaveSizeList;
   bool portrait, injectBackUp, mobileMenuOpen, warnColorPushed;
   bool wantCaptureKeyboard, oldWantCaptureKeyboard, displayMacroMenu;
-  bool displayNew, displayExport, displayPalette, fullScreen, sysFullScreen, preserveChanPos, sysDupCloneChannels, sysDupEnd;
+  bool displayNew, displayExport, displayPalette, displayMidiImport, midiImportConfirmed, fullScreen, sysFullScreen, preserveChanPos, sysDupCloneChannels, sysDupEnd;
+  bool midiImportKeepOldPolyphonyNote;
   unsigned char noteInputMode;
   bool notifyWaveChange, notifySampleChange;
   bool recalcTimestamps;
@@ -1859,6 +1860,7 @@ class FurnaceGUI {
   bool audioEngineChanged, settingsChanged, debugFFT, debugRowTimestamps;
   bool willExport[DIV_MAX_CHIPS];
   int vgmExportVersion;
+  int midiImportPatternRows, midiImportRowResolution, midiImportNoteTranspose;
   int vgmExportTrailingTicks;
   int vgmExportCorrectedRate;
   int cvHiScore;
@@ -3352,6 +3354,7 @@ class FurnaceGUI {
   void drawDebug();
   void drawCSPlayer();
   void drawNewSong();
+  void drawMidiImport();
   void drawPalette();
   void drawExport();
   void drawLog();

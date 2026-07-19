@@ -2045,7 +2045,7 @@ void FurnaceGUI::openFileDialog(FurnaceGUIFileDialogs type) {
       if (!dirExists(workingDirSong)) workingDirSong=getHomeDir();
       hasOpened=fileDialog->openLoad(
         _("Open File"),
-        {_("compatible files"), "*.fur *.dmf *.mod *.s3m *.xm *.it *.fc13 *.fc14 *.smod *.fc *.ftm *.0cc *.dnm *.eft *.fub *.tfe",
+        {_("compatible files"), "*.fur *.dmf *.mod *.s3m *.xm *.it *.mid *.midi *.fc13 *.fc14 *.smod *.fc *.ftm *.0cc *.dnm *.eft *.fub *.tfe",
          _("all files"), "*"},
         workingDirSong,
         dpiScale
@@ -2726,6 +2726,17 @@ int FurnaceGUI::save(String path, int dmfVersion) {
 }
 
 int FurnaceGUI::load(String path) {
+  size_t extPos=path.rfind('.');
+  String extension=(extPos==String::npos)?"":path.substr(extPos);
+  for (char& c: extension) if (c>='A' && c<='Z') c+='a'-'A';
+  if (extension==".mid" || extension==".midi") {
+    if (!midiImportConfirmed) {
+      midiImportPath=path;
+      displayMidiImport=true;
+      return 0;
+    }
+    midiImportConfirmed=false;
+  }
   bool wasPlaying=e->isPlaying();
   if (!path.empty()) {
     logI("loading module...");
@@ -6815,6 +6826,11 @@ bool FurnaceGUI::loop() {
       ImGui::OpenPopup(_("Export"));
     }
 
+    if (displayMidiImport) {
+      displayMidiImport=false;
+      ImGui::OpenPopup(_("Import MIDI"));
+    }
+
     if (displayEditString) {
       ImGui::OpenPopup("EditString");
     }
@@ -7052,6 +7068,12 @@ bool FurnaceGUI::loop() {
     if (ImGui::BeginPopupModal(_("Export"),NULL,ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_AlwaysAutoResize)) {
       ImGui::SetWindowPos(ImVec2(((canvasW)-ImGui::GetWindowSize().x)*0.5,((canvasH)-ImGui::GetWindowSize().y)*0.5));
       drawExport();
+      ImGui::EndPopup();
+    }
+
+    centerNextWindow(_("Import MIDI"),canvasW,canvasH);
+    if (ImGui::BeginPopupModal(_("Import MIDI"),NULL,ImGuiWindowFlags_AlwaysAutoResize)) {
+      drawMidiImport();
       ImGui::EndPopup();
     }
 
@@ -9248,6 +9270,9 @@ FurnaceGUI::FurnaceGUI():
   oldWantCaptureKeyboard(false),
   displayMacroMenu(false),
   displayNew(false),
+  displayMidiImport(false),
+  midiImportConfirmed(false),
+  midiImportKeepOldPolyphonyNote(false),
   displayPalette(false),
   fullScreen(false),
   sysFullScreen(false),
@@ -9286,6 +9311,9 @@ FurnaceGUI::FurnaceGUI():
   debugFFT(false),
   debugRowTimestamps(false),
   vgmExportVersion(0x171),
+  midiImportPatternRows(64),
+  midiImportRowResolution(1),
+  midiImportNoteTranspose(48),
   vgmExportTrailingTicks(-1),
   vgmExportCorrectedRate(44100),
   drawHalt(10),
